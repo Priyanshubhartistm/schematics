@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prototype — Agentic Schematics · ASCII robot reads blueprints</title>
+<style>
+/* ─── Prototype of schemaformat.ai beautify ────────────────────────────
+   Self-contained. index.html + assets/ untouched — this standalone file
+   carries its own copy of the design language (black, magenta, cyan,
+   hairline rules, mono) + a char-grid animation of a robot reading a
+   blueprint. Placement toggles: top / full-page background / off. */
+:root {
+  --bg: #000;
+  --fg: #e9e9ee;
+  --fg-dim: #a0a0aa;
+  --fg-faint: #6e6e7d;
+  --rule: rgba(255,255,255,.08);
+  --rule-strong: rgba(255,255,255,.14);
+  --accent: #f07fb3;            /* omp magenta ≈ oklch(70% .24 340) */
+  --accent-2: #7fd4f2;          /* omp cyan   ≈ oklch(81% .14 200) */
+  --sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --maxw: 1080px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--sans); font-weight: 350; font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+code { font-family: var(--mono); font-size: .85em; background: #0a0a0c;
+  border: 1px solid var(--rule); border-radius: 4px; padding: .05em .35em; }
+em { font-style: normal; }
+
+/* ─── Prototype chrome (not for prod) ──────────────────────────────── */
+.proto-banner {
+  font-family: var(--mono); font-size: 12px; color: var(--fg-dim);
+  border-bottom: 1px dashed var(--rule-strong);
+  padding: 6px 14px; display: flex; gap: 14px; flex-wrap: wrap;
+  background: #050506;
+}
+.proto-banner b { color: var(--accent); font-weight: 500; }
+.proto-banner .kbd { border: 1px solid var(--rule-strong); border-radius: 3px;
+  padding: 0 5px; color: var(--fg); }
+
+/* ─── Nav ──────────────────────────────────────────────────────────── */
+.nav {
+  position: sticky; top: 0; z-index: 20; background: rgba(0,0,0,.82);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: var(--maxw); margin: 0 auto; padding: 14px 1.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+.nav-brand { font-size: .95rem; font-weight: 500; letter-spacing: -.01em; color: var(--fg); }
+.nav-brand:hover { text-decoration: none; }
+.nav-links { display: flex; gap: 1.4rem; }
+.nav-links a { color: var(--fg-dim); font-size: .9rem; }
+.nav-links a:hover { color: var(--fg); text-decoration: none; }
+.nav-cta { font-size: .85rem; border: 1px solid var(--rule-strong); border-radius: 7px;
+  padding: 6px 12px; color: var(--fg); }
+.nav-cta:hover { border-color: var(--accent); text-decoration: none; }
+
+main { max-width: var(--maxw); margin: 0 auto; padding: 0 1.5rem; position: relative; z-index: 1; }
+
+/* ─── Hero ─────────────────────────────────────────────────────────── */
+.hero { padding: 3.2rem 0 4rem; }
+.hero-kicker { font-family: var(--mono); font-size: .72rem; letter-spacing: .16em;
+  color: var(--fg-faint); margin-bottom: 1.1rem; }
+.hero-title { font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 600;
+  letter-spacing: -.03em; line-height: 1.08; margin-bottom: 1.2rem; }
+.hero-title em { color: var(--accent); }
+.hero-sub { max-width: 640px; color: var(--fg-dim); font-size: 1.06rem; margin-bottom: 1.8rem; }
+.hero-sub em { color: var(--fg); font-weight: 450; }
+.hero-actions { display: flex; gap: .8rem; flex-wrap: wrap; margin-bottom: 2.4rem; }
+.btn { font-size: .92rem; border-radius: 8px; padding: 10px 18px; display: inline-block; }
+.btn:hover { text-decoration: none; }
+.btn-primary { background: var(--fg); color: var(--bg); }
+.btn-primary:hover { opacity: .85; }
+.btn-ghost { border: 1px solid var(--rule-strong); color: var(--fg); }
+.btn-ghost:hover { border-color: var(--accent); }
+.hero-stats { display: flex; gap: 2.5rem; border-top: 1px solid var(--rule); padding-top: 1.4rem; }
+.stat-num { font-family: var(--mono); font-size: 1.5rem; font-weight: 600; color: var(--fg); display: block; }
+.stat-label { font-size: .78rem; color: var(--fg-faint); }
+
+/* ─── Scene (top placement) ────────────────────────────────────────── */
+#scene-wrap { display: none; width: min(860px, 100%); margin: 0 auto 2.2rem; position: relative; }
+body[data-placement="top"] #scene-wrap { display: block; }
+#scene { display: block; width: 100%; border: 1px solid var(--rule);
+  border-radius: 10px; background: radial-gradient(120% 120% at 18% 6%, #0b0b10 0%, #000 62%); }
+.scene-caption {
+  font-family: var(--mono); font-size: 11px; color: var(--fg-faint);
+  text-align: center; margin-top: 8px; letter-spacing: .04em;
+}
+
+/* ─── Full-page background placement ───────────────────────────────── */
+body[data-placement="fullpage"] #scene-wrap {
+  display: block; position: fixed; inset: 0; z-index: 0;
+  margin: 0; width: 100%; pointer-events: none;
+}
+body[data-placement="fullpage"] #scene {
+  width: 100%; height: 100vh;
+  border: none; border-radius: 0; background: none;
+}
+body[data-placement="fullpage"] .scene-caption { display: none; }
+body[data-placement="fullpage"] .hero { padding-top: 4.5rem; }
+body[data-placement="fullpage"] section.section,
+body[data-placement="fullpage"] .footer { background: rgba(0,0,0,.66); }
+
+/* ─── Sections ─────────────────────────────────────────────────────── */
+.section { padding: 3.2rem 0; border-top: 1px solid var(--rule); }
+.section-title { font-size: 1.7rem; font-weight: 600; letter-spacing: -.02em; margin-bottom: 1rem; }
+.section-lede { color: var(--fg-dim); max-width: 720px; margin-bottom: 1.8rem; }
+.section-lede strong { color: var(--fg); font-weight: 450; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.4rem; }
+.feature h3 { font-size: 1rem; font-weight: 500; margin-bottom: .35rem; }
+.feature p { color: var(--fg-faint); font-size: .92rem; line-height: 1.55; }
+.flow { display: flex; flex-direction: column; gap: 1.4rem; }
+.flow-num { font-family: var(--mono); font-size: .75rem; color: var(--accent); display: block; margin-bottom: .3rem; }
+.flow h3 { font-size: 1rem; font-weight: 500; }
+.flow p { color: var(--fg-faint); font-size: .92rem; }
+.code-window { border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; margin-top: 2rem; }
+.code-head { display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid var(--rule); background: #0a0a0c; }
+.code-title { font-family: var(--mono); font-size: .78rem; color: var(--fg-dim); }
+.code-body { font-family: var(--mono); font-size: .82rem; line-height: 1.55;
+  color: var(--fg-dim); padding: 16px; overflow-x: auto; }
+
+/* ─── Footer ───────────────────────────────────────────────────────── */
+.footer { border-top: 1px solid var(--rule); padding: 2rem 1.5rem; margin-top: 2rem; }
+.footer-inner { max-width: var(--maxw); margin: 0 auto; display: flex; gap: 1.5rem;
+  flex-wrap: wrap; color: var(--fg-faint); font-size: .85rem; }
+.footer-inner a { color: var(--fg-dim); }
+
+/* ─── Placement picker (prototype chrome) ──────────────────────────── */
+.place-picker {
+  position: fixed; right: 16px; bottom: 16px; z-index: 50;
+  display: flex; align-items: center; gap: 4px;
+  border: 1px dashed var(--rule-strong); border-radius: 10px;
+  background: rgba(5,5,7,.92); padding: 6px 8px;
+  font-family: var(--mono); font-size: 12px; color: var(--fg-dim);
+}
+.place-picker button {
+  font-family: var(--mono); font-size: 12px; color: var(--fg-dim);
+  background: none; border: 1px solid transparent; border-radius: 6px;
+  padding: 4px 9px; cursor: pointer;
+}
+.place-picker button:hover { border-color: var(--rule-strong); color: var(--fg); }
+.place-picker button.on { background: var(--accent); color: #000; border-color: var(--accent); }
+
+@media (max-width: 760px) {
+  .nav-links { display: none; }
+  .hero-stats { gap: 1.4rem; }
+}
+</style>
+</head>
+<body data-placement="top">
+
+<div class="proto-banner">
+  <span><b>PROTOTYPE</b> — schemaformat.ai beautify exploration · <code>index.html</code> + shipped assets untouched</span>
+  <span>placement <span class="kbd">1</span> top · <span class="kbd">2</span> full-page bg · <span class="kbd">0</span> off</span>
+</div>
+
+<header class="nav">
+  <a class="nav-brand" href="#">agentic schematics</a>
+  <nav class="nav-links">
+    <a href="#what">What</a>
+    <a href="#how">How</a>
+    <a href="#faq">FAQ</a>
+  </nav>
+  <a class="nav-cta" href="#" onclick="return false">GitHub ↗</a>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="hero-kicker">THE AGENTIC SCHEMATIC SPEC</p>
+
+    <!-- the animation: same canvas, either in-flow (top) or fixed (full-page) -->
+    <div id="scene-wrap">
+      <canvas id="scene"></canvas>
+      <div class="scene-caption">an agent reads the schematic — phase 03/07 · parameters discovered · acceptance A-1 ✓</div>
+    </div>
+
+    <h1 class="hero-title">Publish a <em>schematic</em>.<br>Anyone builds it. No coordination.</h1>
+    <p class="hero-sub">
+      A schematic is a self-contained build specification — every requirement, parameter,
+      dependency, phase, and acceptance test for a capability — implementable by
+      <em>any LLM, team, or org</em>, in <em>any runtime</em>, without ever contacting the
+      author. The spec is the only coordination mechanism.
+    </p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="#catalog">Browse schematics</a>
+      <a class="btn btn-ghost" href="#" onclick="return false">View on GitHub ↗</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-num">3</span><span class="stat-label">schematics</span></div>
+      <div class="stat"><span class="stat-num">10</span><span class="stat-label">binding principles</span></div>
+      <div class="stat"><span class="stat-num">0</span><span class="stat-label">coordination required</span></div>
+    </div>
+  </section>
+
+  <section class="section" id="what">
+    <h2 class="section-title">What is an agentic schematic?</h2>
+    <p class="section-lede">
+      In Daniel Suarez's <em>Daemon</em>, the Darknet spreads through shared schematics: publish the
+      spec, and independent teams build the network — no central authority, no coordination.
+      Agentic schematics apply the same pattern to software capabilities. The schematic
+      <strong>replaces the author</strong>: no meetings, no shared history, no access to the original
+      conversation.
+    </p>
+    <div class="grid-3">
+      <div class="feature"><h3>Self-contained</h3><p>Every requirement, parameter, dependency, phase, and test lives inside the package. No "see the original repo", no "ask the author".</p></div>
+      <div class="feature"><h3>Vendor-agnostic</h3><p>Plain Markdown and portable shell. Any LLM with a shell and a text editor can execute it.</p></div>
+      <div class="feature"><h3>Idempotent</h3><p>Every phase is safe to re-run. Verification gives the same verdict every time.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <h2 class="section-title">How it works</h2>
+    <div class="flow">
+      <div class="flow-step"><span class="flow-num">01</span><h3>Author or reverse-engineer</h3><p>Write a schematic from an idea, or distill one from a working implementation.</p></div>
+      <div class="flow-step"><span class="flow-num">02</span><h3>Publish once</h3><p>One Markdown file is the entire coordination. Push it to a repo, paste it into a session, hand it to a stranger.</p></div>
+      <div class="flow-step"><span class="flow-num">03</span><h3>Anyone builds, independently</h3><p>Any LLM in any runtime follows the phases, discovers local parameters, and proves the result against the acceptance tests.</p></div>
+    </div>
+    <div class="code-window">
+      <div class="code-head"><span class="code-title">SCHEMATIC.md (skeleton)</span></div>
+      <pre class="code-body"><code>name: my-schematic
+version: 0.1.0
+status: draft
+
+## Requirements    → R-1, R-2, ... (testable)
+## Dependencies    → D-1, D-2, ... (with failure behavior)
+## Parameters      → P-1, P-2, ... (with discovery methods)
+## Modules         → one contract per module
+## Implementation  → idempotent phases with verification
+## Acceptance      → A-1, A-2, ... (one per requirement)</code></pre>
+    </div>
+  </section>
+
+  <section class="section" id="faq">
+    <h2 class="section-title">Hard questions, answered plainly</h2>
+    <div class="grid-3">
+      <div class="feature">
+        <h3>Won't better models make this obsolete?</h3>
+        <p>Parts of it, and we trim those parts as they do. What ages well: verification literals, parameter discovery, explicit failure behavior. The format is a living spec precisely so the dumb-builder scaffolding can be cut as builders get smarter.</p>
+      </div>
+      <div class="feature">
+        <h3>Who has actually built anything from one?</h3>
+        <p>The first schematic was reverse-engineered from a production fleet and re-implemented from the spec; the next milestone is an independent build by someone with no connection to the author, logged publicly.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <span>© 2026 agentic schematics</span>
+    <span>prototype page — placement: <span id="fp-label">top</span></span>
+  </div>
+</footer>
+
+<!-- placement control (prototype chrome) -->
+<div class="place-picker" role="group" aria-label="animation placement">
+  <span>placement</span>
+  <button data-p="top" class="on">top</button>
+  <button data-p="fullpage">full-page</button>
+  <button data-p="off">off</button>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   ASCII scene — a robot reading blueprints.
+   Char grid 76×22. Left: a blueprint sheet whose lines "draw in" as a
+   magenta scan beam sweeps it. Right: a robot; its pupils pulse with
+   the beam and a data-stream of dots carries the read row from sheet
+   edge to eye; chest screen scrolls live parse/discover/phase log
+   lines. Rendered per-frame to <canvas> as monospace cells.
+   ══════════════════════════════════════════════════════════════════ */
+
+const GW = 76, GH = 22;
+const BP_X = 1, BP_W = 44, BP_Y = 2, BP_H = 15;   // blueprint rect (grid coords)
+const ROB_X = 47, ROB_Y0 = 0;                     // robot origin (grid coords)
+const EYE_GY = ROB_Y0 + 6;                        // robot eye band row
+
+const C = {
+  fg:     '233,233,238',
+  dim:    '160,160,170',
+  faint:  '110,110,125',
+  cyan:   '127,212,242',
+  accent: '240,127,179',
+};
+
+// blueprint rows: [label ≤28, right tag ≤9, kind] — kind → color
+const BP_ROWS = [
+  ['R-1 deny raw socket exposure',        '[verify]', 'r'],
+  ['R-2 authorize daemon calls',          '[verify]', 'r'],
+  ['D-1 docker-socket-proxy @9f2c',       '[pinned]', 'd'],
+  ['D-2 opa 0.61.0+sha:b84d',             '[pinned]', 'd'],
+  ['P-1 DOCKER_SOCKET_PATH<-ss-lx',       'disc.',   'p'],
+  ['P-2 SECRETS_DIR<-ls /etc/*-secr',     'disc.',   'p'],
+  ['P-3 OPA_RULES_DIR<-find *.rego',      'disc.',   'p'],
+  ['M-01 proxy:deny-default ingress',     '03/07',   'm'],
+  ['M-02 policy:auth-then-route',         '04/07',   'm'],
+  ['M-03 secrets:encrypted at rest',      '05/07',   'm'],
+  ['ACCEPTANCE A-1..A-6 in package',      '[spec]',  'a'],
+  ['BUILDER any LLM, any runtime',        '0 coord', 'b'],
+];
+
+// robot art (24 cols). %P% = chest pulse. rows 0..12 head+chest;
+// 13..17 log band (drawn dynamically); 18..20 feet/base.
+const ROBOT = [
+  '     ▄▄▄▄▄',
+  '     /   \\',
+  '   ┌──────────┐',
+  '   │ ▓▓▓▒▒▒▒▒ │',
+  '   └──┬────┬──┘',
+  '  ┌───┴    ┴───┐',
+  '  ( ●●     ●● )',
+  '  └───┬────┬──┘',
+  '  ┌───┴    ┴───┐',
+  '  │   ╔════╗   │',
+  '  │   ║ %P% ║   │',
+  '  │   ╚════╝   │',
+  '  └──────────┘',
+  '',
+  '',
+  '',
+  '',
+  '',
+  '       /\\           ',
+  '      /  \\          ',
+  '  ──────────────    ',
+];
+
+const LOGS = [
+  'parse: R-1..R-2 ok',
+  'deps:  pinned sha OK',
+  'params:discovered OK',
+  'scan:  03/07 ▓▓▓░░░',
+  'phase: 03/07 done OK',
+  'accept:A-1..A-6 OK',
+];
+const BLANK_ROBOT_ROW = '                        ';
+
+let logIdx = 0;
+
+/* ─── canvas plumbing ─────────────────────────────────────────────── */
+const canvas = document.getElementById('scene');
+const wrap   = document.getElementById('scene-wrap');
+const ctx    = canvas.getContext('2d');
+let dpr = 1, cssW = 860, cssH = 260;
+let mode = 'top';
+let cellW = 13, cellH = 17, fontPx = 15, ox = 0, oy = 0;
+
+function measureFont(px) {
+  ctx.font = px + 'px "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+  return { w: ctx.measureText('M').width, h: px * 1.16 };
+}
+
+// font size so that one cell width == target px
+function fontForCell(targetPx) {
+  let f = targetPx / 0.6;                       // mono ≈ 0.6 em advance
+  for (let i = 0; i < 3; i++) {                 // converge to exact width
+    const m = measureFont(f);
+    f *= targetPx / m.w;
+  }
+  const m = measureFont(f);
+  return { font: f, w: m.w, h: m.h };
+}
+
+function fitTop() {
+  dpr = window.devicePixelRatio || 1;
+  cssW = wrap.clientWidth || 860;
+  const m = fontForCell(cssW / GW);
+  cellW = m.w; cellH = m.h; fontPx = m.font;
+  cssH = GH * cellH;
+  canvas.width  = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  canvas.style.width  = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ox = 0; oy = 0;
+}
+
+function fitFull() {
+  dpr = window.devicePixelRatio || 1;
+  cssW = window.innerWidth; cssH = window.innerHeight;
+  canvas.width  = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  canvas.style.width = cssW + 'px';
+  canvas.style.height = cssH + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const m = fontForCell(Math.max(8, cssW / 78));  // scene ≈ 78 cells incl margins
+  cellW = m.w; cellH = m.h; fontPx = m.font;
+  ox = Math.max(0, (cssW - GW * cellW) / 2);      // center horizontally
+  oy = Math.max(0, cssH - GH * cellH - 24);       // anchor near the bottom
+}
+
+/* ─── draw helpers ────────────────────────────────────────────────── */
+function cellAt(gx, gy, ch, col, alpha) {
+  if (!ch || ch === ' ') return;
+  ctx.fillStyle = 'rgba(' + col + ',' + alpha + ')';
+  ctx.fillText(ch, ox + gx * cellW, oy + (gy + 0.5) * cellH);
+}
+
+function kindColor(kind) {
+  return kind === 'r' ? C.fg
+       : kind === 'd' ? C.cyan
+       : kind === 'p' ? C.dim
+       : kind === 'm' ? C.accent
+       : kind === 'a' ? C.fg
+       : C.faint;
+}
+
+/* ─── scene draw ──────────────────────────────────────────────────── */
+function drawScene(now, dim) {
+  // dim: brightness multiplier (1 = hero mode, 0.3 = background mode)
+  const t = (now % 6000) / 6000;                 // 6 s loop
+  const eased = t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const scanY = eased * (BP_ROWS.length - 1);    // 0..rows-1
+  const a = v => (v * dim).toFixed(3);
+
+  ctx.textBaseline = 'middle';
+
+  /* blueprint sheet */
+  const bpx = ox + BP_X * cellW, bpy = oy + (BP_Y + 0.5) * cellH;
+  const rowH = cellH;
+  // sheet frame
+  ctx.strokeStyle = 'rgba(' + C.cyan + ',' + a(0.5) + ')';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bpx, oy + BP_Y * cellH, BP_W * cellW, BP_H * cellH);
+  // header
+  ctx.fillStyle = 'rgba(' + C.cyan + ',' + a(0.85) + ')';
+  ctx.fillText('SCHEMATIC · improve-docker-security', bpx + cellW, bpy);
+  ctx.fillStyle = 'rgba(' + C.faint + ',' + a(0.7) + ')';
+  ctx.fillText('v0.1.0', bpx + (BP_W - 7) * cellW, bpy);
+
+  // content rows
+  for (let i = 0; i < BP_ROWS.length; i++) {
+    const gy = BP_Y + 1 + i;
+    const dist = gy - (BP_Y + 1 + scanY);        // <0 above beam, 0 at beam
+    let base;
+    if (dist < -0.6)       base = 0.5;           // fully read
+    else if (dist < 0.001) base = 0.98;          // just revealed (bright)
+    else                   base = 0.15;          // not yet read
+    const row = BP_ROWS[i];
+    // gutter scan marker
+    if (Math.abs(dist) < 0.5) {
+      ctx.fillStyle = 'rgba(' + C.accent + ',' + a(1) + ')';
+      ctx.fillText('>', bpx + cellW * 0.3, bpy + (i + 1) * rowH);
+    }
+    // row number
+    ctx.fillStyle = 'rgba(' + C.faint + ',' + a(0.45) + ')';
+    ctx.fillText(String(i + 1).padStart(2, '0'), bpx + cellW * 1.45, bpy + (i + 1) * rowH);
+    // label (max 28 chars, cols 3.2..31.2)
+    ctx.fillStyle = 'rgba(' + kindColor(row[2]) + ',' + a(base) + ')';
+    ctx.fillText(row[0], bpx + cellW * 3.2, bpy + (i + 1) * rowH);
+    // right tag (right-aligned, 9 chars at cols 33..42)
+    ctx.fillStyle = 'rgba(' + C.cyan + ',' + a(base * 0.8) + ')';
+    ctx.fillText(row[1], bpx + (BP_W - 11) * cellW, bpy + (i + 1) * rowH);
+    // row hairline
+    ctx.strokeStyle = 'rgba(' + C.cyan + ',' + a(0.09) + ')';
+    ctx.beginPath();
+    ctx.moveTo(bpx + cellW, oy + (gy + 1.14) * cellH);
+    ctx.lineTo(bpx + (BP_W - 1) * cellW, oy + (gy + 1.14) * cellH);
+    ctx.stroke();
+  }
+
+  // status bar (bottom of sheet)
+  const filled = Math.round(t * 12);
+  ctx.fillStyle = 'rgba(' + C.fg + ',' + a(0.4) + ')';
+  ctx.fillText('spec self-contained · ', bpx + cellW, oy + (BP_Y + BP_H - 1) * cellH);
+  ctx.fillStyle = 'rgba(' + C.accent + ',' + a(0.8) + ')';
+  ctx.fillText('█'.repeat(filled) + '░'.repeat(12 - filled),
+               bpx + cellW * 24.6, oy + (BP_Y + BP_H - 1) * cellH);
+
+  /* scan beam on the sheet + data stream into the robot's eye */
+  const sRowG = BP_Y + 1 + scanY;                // scan row (grid)
+  // glow band across the sheet at the scan row
+  ctx.fillStyle = 'rgba(' + C.accent + ',' + a(0.13 + 0.07 * Math.sin(now / 90)) + ')';
+  ctx.fillRect(bpx, oy + (sRowG - 0.55) * cellH, BP_W * cellW, cellH * 1.1);
+  // scan line
+  ctx.fillStyle = 'rgba(' + C.accent + ',' + a(0.95) + ')';
+  ctx.fillRect(bpx + cellW, oy + (sRowG - 0.08) * cellH, (BP_W - 2) * cellW, Math.max(1.5, cellH * 0.12));
+  // impact spark at the sheet edge
+  if (Math.sin(now / 70) > 0.45)
+    cellAt(BP_X + BP_W - 2, sRowG, '*', C.accent, a(0.95));
+  // data stream: chunks drifting from sheet edge → left eye, at eye row
+  const streamOff = Math.floor(now / 110) % 6;
+  for (let k = 0; k < 3; k++) {
+    const gx = BP_X + BP_W + 1 + ((k * 2 + streamOff) % 5);
+    if (gx < ROB_X + 3) cellAt(gx, EYE_GY, '·', C.accent, a(0.55 + 0.25 * ((k + streamOff) % 2)));
+  }
+  // eye pulse when the beam passes the eye row
+  ctx.fillStyle = 'rgba(' + C.accent + ',' + a(0.5 + 0.5 * Math.max(0, 1 - Math.abs(sRowG - EYE_GY) / 4)) + ')';
+  ctx.fillText('●', ox + (ROB_X + 4) * cellW, oy + (EYE_GY + 0.5) * cellH);
+
+  const blink = Math.floor(now / 160) % 95 < 3;
+  if (blink) {
+    ctx.fillStyle = 'rgba(' + C.accent + ',' + a(0.4) + ')';
+    ctx.fillText('.', ox + (ROB_X + 4) * cellW, oy + (EYE_GY + 0.5) * cellH);
+  }
+  // chest pulse
+  const pulse = Math.sin(now / 280) > 0.3 ? '▓▓' : '░░';
+  const log0 = LOGS[(logIdx + 0) % LOGS.length];
+  const log1 = LOGS[(logIdx + 1) % LOGS.length];
+  const log2 = LOGS[(logIdx + 2) % LOGS.length];
+
+  for (let ry = 0; ry < GH; ry++) {
+    const gy = ROB_Y0 + ry;
+    // log band rows (13..17)
+    if (gy === ROB_Y0 + 13) {
+      cellAt(ROB_X, gy, '┌' + '─'.repeat(18) + '┐', C.dim, a(0.8));
+      continue;
+    }
+    if (gy === ROB_Y0 + 14 || gy === ROB_Y0 + 15 || gy === ROB_Y0 + 16) {
+      const text = gy === ROB_Y0 + 14 ? log0 : gy === ROB_Y0 + 15 ? log1 : log2;
+      ctx.fillStyle = 'rgba(' + C.cyan + ',' + a(0.9) + ')';
+      ctx.fillText(text.slice(0, 18), ox + (ROB_X + 1) * cellW, oy + (gy + 0.5) * cellH);
+      cellAt(ROB_X, gy, '│', C.dim, a(0.8));
+      cellAt(ROB_X + 19, gy, '│', C.dim, a(0.8));
+      continue;
+    }
+    if (gy === ROB_Y0 + 17) {
+      cellAt(ROB_X, gy, '└' + '─'.repeat(18) + '┘', C.dim, a(0.8));
+      continue;
+    }
+    // static art rows
+    const raw = ROBOT[ry] || BLANK_ROBOT_ROW;
+    const line = raw.replace('%P%', pulse);
+    const eyeRow = (gy === EYE_GY);
+    for (let c = 0; c < 24; c++) {
+      const ch = line[c];
+      if (!ch || ch === ' ') continue;
+      let col, alpha;
+      if (eyeRow) {
+        col = (ch === '●' || ch === '.') ? C.accent : C.dim;
+        alpha = 0.95;
+      } else if (ch === '█') { col = C.faint; alpha = 0.5; }
+      else if (ch === '▓') { col = C.dim; alpha = 0.85; }
+      else if (ch === '▒') { col = C.faint; alpha = 0.5; }
+      else { col = C.dim; alpha = 0.62; }
+      cellAt(ROB_X + c, gy, ch, col, a(alpha));
+    }
+  }
+}
+
+/* ─── full-page backdrop: grid + slow glint + dim scene ────────────── */
+function drawBackdrop(now) {
+  const vw = cssW, vh = cssH;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, vw, vh);
+  const g = 64;
+  ctx.lineWidth = 1;
+  for (let x = 0; x <= vw; x += g) {
+    ctx.strokeStyle = 'rgba(' + C.cyan + ',' + ((x / g) % 4 === 0 ? 0.16 : 0.08) + ')';
+    ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, vh); ctx.stroke();
+  }
+  for (let y = 0; y <= vh; y += g) {
+    ctx.strokeStyle = 'rgba(' + C.cyan + ',' + ((y / g) % 4 === 0 ? 0.18 : 0.09) + ')';
+    ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(vw, y + 0.5); ctx.stroke();
+  }
+  // slow diagonal magenta glint
+  const sweep = ((now / 14000) % 1.8) - 0.4;
+  const sx = sweep * (vw + 900) - 450;
+  const grad = ctx.createLinearGradient(sx, -200, sx + 700, vh + 200);
+  grad.addColorStop(0, 'rgba(' + C.accent + ',0)');
+  grad.addColorStop(0.5, 'rgba(' + C.accent + ',0.12)');
+  grad.addColorStop(1, 'rgba(' + C.accent + ',0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, vw, vh);
+
+  drawScene(now, 0.55);
+}
+
+/* ─── mode + loop ─────────────────────────────────────────────────── */
+function frame(now) {
+  ctx.clearRect(0, 0, cssW, cssH);
+  if (mode === 'top') {
+    drawScene(now, 1);
+  } else if (mode === 'fullpage') {
+    drawBackdrop(now);
+  }
+  requestAnimationFrame(frame);
+}
+
+function setMode(m) {
+  mode = m;
+  document.body.dataset.placement = m;
+  document.getElementById('fp-label').textContent =
+    m === 'fullpage' ? 'full-page bg' : m;
+  document.querySelectorAll('.place-picker button').forEach(b =>
+    b.classList.toggle('on', b.dataset.p === m));
+  if (m === 'top') { canvas.style.display = ''; fitTop(); }
+  else if (m === 'fullpage') { canvas.style.display = ''; fitFull(); }
+  else { canvas.style.display = 'none'; }
+}
+
+window.addEventListener('resize', () => {
+  if (mode === 'top') fitTop();
+  else if (mode === 'fullpage') fitFull();
+});
+document.querySelectorAll('.place-picker button').forEach(b =>
+  b.addEventListener('click', () => setMode(b.dataset.p)));
+window.addEventListener('keydown', e => {
+  if (e.key === '1') setMode('top');
+  else if (e.key === '2') setMode('fullpage');
+  else if (e.key === '0' || e.key === 'Escape') setMode('off');
+});
+
+// rotate the chest log once per scan pass (6 s)
+setInterval(() => { logIdx = (logIdx + 1) % LOGS.length; }, 6000);
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+if (reduceMotion) {
+  fitTop();
+  drawScene(1500, 1);                             // one static frame
+} else {
+  setMode('top');
+  requestAnimationFrame(frame);
+}
+</script>
+</body>
+</html>
