@@ -116,13 +116,13 @@ Implementation-specific binding choices:
 |-----|------|------------|-----------|------------------|
 | D-1 | Docker Engine with unix socket | The proxy forwards to it | `docker info` | Proxy starts but every request fails with 5xx; audit script reports the daemon unreachable |
 | D-2 | Docker Compose v2 | Service definition and network isolation | `docker compose version` | Use `docker run` equivalents; compose syntax is not portable to v1 |
-| D-3 | tecnativa/restrict-docker-api-access image | The proxy itself (HAProxy in front of the socket) | Pinned digest in the compose file | Pull failure blocks deploy; any registry mirror may substitute |
+| D-3 | tecnativa/docker-socket-proxy image | The proxy itself (HAProxy in front of the socket) | Pinned digest in the compose file | Pull failure blocks deploy; any registry mirror may substitute |
 
 ## Parameters
 
 | Id  | Name | Type | Default | Discovery | Effect |
 |-----|------|------|---------|-----------|--------|
-| P-1 | PROXY_IMAGE | string | `tecnativa/restrict-docker-api-access` | The deployment's registry layout | Image to run; pin the tag to a digest |
+| P-1 | PROXY_IMAGE | string | `tecnativa/docker-socket-proxy` | The deployment's registry layout | Image to run; pin the tag to a digest |
 | P-2 | DOCKER_SOCKET_PATH | path | `/var/run/docker.sock` | `docker info -f '{{.DockerRootDir}}'` and host inspection | Socket mounted read-only into the proxy |
 | P-3 | COMPOSE_PROJECT_DIR | path | (the directory holding the compose file) | Where the consumer stack lives | Network attachment point for consumers |
 | P-4 | ALLOWED_GROUPS | env map | (empty) | Grep consumer configs for the API paths they call; each gets a justification | Endpoint groups enabled, e.g. `IMAGES=1`, `CONTAINERS=1` |

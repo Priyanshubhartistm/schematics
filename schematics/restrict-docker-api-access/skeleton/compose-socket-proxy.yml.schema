@@ -11,7 +11,7 @@ YAML with `services:` and `networks:` top-level keys (Docker Compose v2).
 
 | Field | Meaning | Rule |
 |-------|---------|------|
-| image | tecnativa/restrict-docker-api-access, pinned `@sha256:` | Digest REQUIRED (R-4) |
+| image | tecnativa/docker-socket-proxy, pinned `@sha256:` | Digest REQUIRED (R-4) |
 | environment | One var per enabled endpoint group, value `1` | Deny-by-default (R-2); each entry needs a comment justification (R-3) |
 | volumes | Exactly `/var/run/docker.sock:/var/run/docker.sock:ro` | Read-only REQUIRED (R-6) |
 | networks | The internal network only | No `ports:` key may exist (R-5) |
