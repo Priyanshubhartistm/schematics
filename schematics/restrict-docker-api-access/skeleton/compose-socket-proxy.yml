@@ -11,6 +11,13 @@ services:
     container_name: socket-proxy
     restart: unless-stopped
     environment:
+      # The pinned image sets EVENTS, PING and VERSION to 1 in its own ENV, so
+      # leaving them out still allows GET /events, GET /_ping and GET /version.
+      # Pin them off for the effective policy to be what this file says (R-2);
+      # see modules/endpoint-scoping.md.
+      EVENTS: 0      # no consumer watches the daemon event stream
+      PING: 0        # no consumer probes /_ping
+      VERSION: 0     # nothing reads the daemon version
       # Enable groups ONLY as consumers require them, each with a
       # justification (see modules/endpoint-scoping.md). Example of a
       # pull-only pipeline:

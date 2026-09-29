@@ -72,6 +72,12 @@ services:
     container_name: webhook-socket-proxy
     restart: unless-stopped
     environment:
+      # The pinned image sets EVENTS, PING and VERSION to 1 in its own ENV, so
+      # omitting them would leave them allowed. Pinned off so this list is the
+      # whole policy (R-2).
+      EVENTS: 0      # no consumer watches the daemon event stream
+      PING: 0        # no consumer probes /_ping
+      VERSION: 0     # nothing reads the daemon version
       IMAGES: 1      # POST /images/create (the pull), GET /images/... (exists?)
       CONTAINERS: 1  # GET /containers/json (running-version status)
       POST: 1        # the POST verb; start/stop/restart stay off
